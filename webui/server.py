@@ -205,7 +205,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_file(self, path, content_type):
+    def _send_file(self, path, content_type, as_attachment=False):
         if not os.path.isfile(path):
             self._send_json({"message": "文件不存在"}, 404)
             return
@@ -214,7 +214,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Content-Disposition", "attachment")
+        if as_attachment:
+            self.send_header("Content-Disposition", "attachment")
         self.end_headers()
         self.wfile.write(body)
 
@@ -229,10 +230,10 @@ class Handler(BaseHTTPRequestHandler):
             name = unquote(path[len("/download/"):])
             if name == "result.json":
                 self._send_file(BenchState.result_json or os.path.join(RESULTS_DIR, "result.json"),
-                                "application/json; charset=utf-8")
+                                "application/json; charset=utf-8", as_attachment=True)
             elif name == "result.csv":
                 self._send_file(BenchState.result_csv or os.path.join(RESULTS_DIR, "result.csv"),
-                                "text/csv; charset=utf-8")
+                                "text/csv; charset=utf-8", as_attachment=True)
             else:
                 self._send_json({"message": "未知文件"}, 404)
         elif path == "/api/events":
