@@ -1,0 +1,61 @@
+[package]
+# 项目基本信息：包名、版本、edition 与说明
+name = "rhb"
+version = "1.0.0"
+edition = "2021"
+description = "Rust HTTP 压测工具：高性能 HTTP 请求发生器与性能评估工具"
+license = "MIT"
+authors = ["实训小组"]
+
+# 可执行文件名（压测工具命令行入口）
+[[bin]]
+name = "rhb"
+path = "src/main.rs"
+
+# 依赖配置：全部为 2026 年当前稳定版本
+[dependencies]
+# 异步运行时：提供多线程工作窃取调度与 Timer
+tokio = { version = "1", features = ["full"] }
+# HTTP 客户端：封装 Hyper，支持 HTTP/1.1、HTTP/2、rustls TLS、gzip 等
+reqwest = { version = "0.12", features = [
+    "json",          # JSON 响应解析
+    "http2",         # HTTP/2 协议支持
+    "rustls-tls",    # 纯 Rust TLS 实现，避免 OpenSSL 外部依赖
+    "gzip",          # gzip 压缩响应
+    "brotli",        # brotli 压缩响应
+    "deflate",       # deflate 压缩响应
+    "charset",       # 字符集处理
+    "stream",        # 响应流式读取
+] }
+# 命令行参数解析引擎
+clap = { version = "4", features = ["derive", "env"] }
+# 序列化/反序列化框架
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# YAML 配置文件解析
+serde_yaml = "0.9"
+# 高精度延迟分布统计（p50/p95/p99 百分位数）
+hdrhistogram = "7"
+# 终端进度条与实时状态展示
+indicatif = "0.17"
+# CSV 明细数据导出
+csv = "1"
+# 随机数生成（数据集随机化压测）
+rand = "0.8"
+# 便捷错误处理
+anyhow = "1"
+# 时间戳格式化
+chrono = "0.4"
+
+[dev-dependencies]
+# 集成测试中构建本地 HTTP 目标服务（最小化服务器）
+hyper = { version = "1", features = ["server", "http1", "http2"] }
+hyper-util = { version = "0.1", features = ["tokio", "server", "server-auto"] }
+http-body-util = "0.1"
+bytes = "1"
+
+# 发布构建优化：追求极致性能（压测工具自身开销要小）
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3

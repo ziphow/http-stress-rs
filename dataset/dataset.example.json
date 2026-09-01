@@ -1,0 +1,30 @@
+{
+  "templates": [
+    {
+      "method": "GET",
+      "path": "/",
+      "headers": {},
+      "body": null
+    },
+    {
+      "method": "GET",
+      "path": "/json",
+      "headers": {},
+      "body": null
+    },
+    {
+      "method": "POST",
+      "path": "/echo",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": "{\"username\":\"{{random.string(8)}}\",\"age\":{{random.int(18,80)}},\"email\":\"{{random.email}}\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/delay/{{random.int(1,20)}}",
+      "headers": {},
+      "body": null
+    }
+  ]
+}

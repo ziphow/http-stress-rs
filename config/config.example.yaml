@@ -1,0 +1,76 @@
+# ============================================================
+# rhb 压测工具示例配置文件
+# 用法：rhb -C config/config.example.yaml
+# 优先级：命令行参数 > 本配置文件 > 内置默认值
+# ============================================================
+
+# 目标服务 URL（必选，也可通过命令行位置参数指定）
+url: http://127.0.0.1:8080
+
+# 并发连接数（默认 50）
+concurrency: 100
+
+# 总请求数（与 time 二选一或同时使用，先达成者停止）
+requests: 10000
+
+# 压测时长（秒）
+# time: 30
+
+# 请求方法（默认 GET）
+method: GET
+
+# 自定义请求头（键值映射）
+headers:
+  User-Agent: rhb-benchmark/0.1
+  Accept: "*/*"
+
+# 请求体（内联）
+# body: '{"hello":"world"}'
+
+# QPS 限流（令牌桶，0 表示不限流）
+# rate: 500
+
+# 启用 HTTP/2 协议
+http2: false
+
+# 禁用 TLS 证书校验（仅测试环境）
+no_tls: false
+
+# 数据集文件路径（请求随机化）
+# dataset: dataset/dataset.example.json
+
+# 数据集选择策略：random / sequential
+dataset_mode: random
+
+# 预热请求数（不计入统计）
+warmup: 100
+
+# 单请求超时（秒）
+timeout: 30
+
+# 失败重试次数
+retries: 0
+
+# 是否跟随重定向
+redirect: true
+
+# 是否输出 ASCII 延迟柱状图
+histogram: true
+
+# 是否 JSON 输出到终端
+json: false
+
+# JSON 结果导出文件
+json_file: result.json
+
+# CSV 明细导出文件
+# csv: result.csv
+
+# p99 延迟达标阈值（毫秒）
+# p99_threshold_ms: 500
+
+# 错误率阈值（百分比）
+# error_threshold_pct: 5
+
+# 是否隐藏进度条
+no_progress: false
