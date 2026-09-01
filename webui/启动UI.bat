@@ -1,6 +1,6 @@
 @echo off
-rem rhb 压测控制台一键启动（Windows）
-chcp 65001 >nul
+rem rhb Web UI launcher (Windows)
+chcp 65001 >nul 2>&1
 setlocal
 cd /d "%~dp0"
 
@@ -10,7 +10,7 @@ if not defined PY (
     where py >nul 2>nul && set "PY=py"
 )
 if not defined PY (
-    echo [错误] 未找到 Python，请先安装 Python 3.8+ 并加入 PATH。
+    echo [ERROR] Python not found. Please install Python 3.8+ and add it to PATH.
     pause
     exit /b 1
 )
@@ -18,9 +18,9 @@ if not defined PY (
 if exist "..\target\release\rhb.exe" set "RHB_EXE=..\target\release\rhb.exe"
 
 echo ============================================
-echo   rhb 压测控制台
-echo   服务启动后将自动打开浏览器窗口
-echo   关闭本窗口或在窗口中按 Ctrl+C 可停止服务
+echo   rhb Benchmark Control Panel
+echo   A browser window will open automatically.
+echo   Press Ctrl+C in this window to stop.
 echo ============================================
 %PY% server.py %*
 pause
