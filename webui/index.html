@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rhb 压测控制台</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #111a2e;
+    --panel2: #0f172a;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+  header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 24px; background: var(--panel2);
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10;
+  }
+  .logo {
+    width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0;
+    background: linear-gradient(135deg, #3b82f6, #06b6d4);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 16px; color: #fff;
+  }
+  .title { font-size: 17px; font-weight: 700; }
+  .subtitle { font-size: 12px; color: var(--muted); }
+  .spacer { flex: 1; }
+  .status-pill {
+    display: flex; align-items: center; gap: 7px;
+    padding: 6px 13px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    background: var(--panel); border: 1px solid var(--border); color: var(--muted);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+  .dot.running { background: var(--warning); animation: blink 1s infinite; }
+  .dot.done { background: var(--success); }
+  .dot.error { background: var(--danger); }
+  @keyframes blink { 50% { opacity: .35; } }
+  main { display: grid; grid-template-columns: 400px 1fr; gap: 18px; padding: 18px 24px; max-width: 1500px; margin: 0 auto; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); }
+  .card-h { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .card-h .badge { font-size: 10px; font-weight: 600; color: var(--muted); background: var(--panel2); padding: 2px 8px; border-radius: 12px; }
+  .card-b { padding: 14px 16px; }
+
+  .config-scroll { max-height: calc(100vh - 150px); overflow-y: auto; padding-right: 4px; }
+  .field { margin-bottom: 13px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 600; }
+  .field .req { color: var(--danger); }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; background: var(--panel2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 7px; padding: 8px 10px; font-size: 13px; outline: none;
+    font-family: inherit; transition: border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder, textarea::placeholder { color: #475569; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row2b { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+  .hdr-row { display: grid; grid-template-columns: 1fr 1.4fr 28px; gap: 7px; margin-bottom: 7px; }
+  .hdr-row .del { background: transparent; border: none; color: var(--danger); font-size: 16px; cursor: pointer; }
+  .add-btn, .mini-btn {
+    background: var(--panel2); border: 1px dashed var(--border); color: var(--accent2);
+    border-radius: 7px; padding: 6px 10px; font-size: 12px; cursor: pointer; transition: .15s;
+  }
+  .add-btn:hover { border-color: var(--accent); }
+  .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .check { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text); cursor: pointer; }
+  .check input { accent-color: var(--accent); width: 15px; height: 15px; }
+  details.adv { margin-top: 4px; }
+  details.adv summary { font-size: 12px; color: var(--accent2); cursor: pointer; padding: 4px 0; user-select: none; }
+  .actions { display: flex; gap: 10px; margin-top: 6px; }
+  .btn {
+    flex: 1; border: none; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 700;
+    cursor: pointer; color: #fff; transition: .15s; font-family: inherit;
+  }
+  .btn-start { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
+  .btn-start:hover { filter: brightness(1.1); }
+  .btn-start:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-stop { background: var(--panel2); border: 1px solid var(--danger); color: var(--danger); }
+  .btn-stop:hover { background: var(--danger); color: #fff; }
+  .btn-stop:disabled { opacity: .4; cursor: not-allowed; }
+
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .metric { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .metric .k { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .metric .v { font-size: 20px; font-weight: 800; margin-top: 4px; }
+  .metric .v.good { color: var(--success); }
+  .metric .v.bad { color: var(--danger); }
+  .metric .v.warn { color: var(--warning); }
+  .lat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 8px; }
+  .lat { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; text-align: center; }
+  .lat .k { font-size: 11px; color: var(--accent2); font-weight: 700; }
+  .lat .v { font-size: 16px; font-weight: 800; margin-top: 3px; }
+  .lat .u { font-size: 10px; color: var(--muted); }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 700px) { .charts { grid-template-columns: 1fr; } }
+  .chart-box { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+  .chart-box .cb-h { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+  .chart { width: 100%; height: 240px; }
+  pre#raw {
+    background: #0a0f1c; border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; font-size: 12px; line-height: 1.6; white-space: pre-wrap;
+    word-break: break-all; max-height: 300px; overflow-y: auto; color: #cbd5e1;
+    font-family: "Cascadia Code", Consolas, monospace;
+  }
+  .dl-row { display: flex; gap: 10px; margin-top: 10px; }
+  .dl-link {
+    background: var(--panel2); border: 1px solid var(--border); color: var(--accent2);
+    text-decoration: none; font-size: 12.5px; padding: 7px 14px; border-radius: 7px; transition: .15s;
+  }
+  .dl-link:hover { border-color: var(--accent); }
+  .toast {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+    background: var(--panel); border: 1px solid var(--accent); color: var(--text);
+    padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 99;
+    opacity: 0; transition: opacity .25s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  .empty-tip { color: var(--muted); font-size: 13px; text-align: center; padding: 40px 10px; }
+  section.results { min-width: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">rhb</div>
+  <div>
+    <div class="title">rhb 压测控制台</div>
+    <div class="subtitle">Rust HTTP 压测工具 · Web 图形界面</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="status-pill"><span class="dot" id="dot"></span><span id="statusText">待命</span></div>
+</header>
+
+<main>
+  <!-- 左侧：参数配置 -->
+  <aside class="card config-scroll">
+    <div class="card-h">压测参数 <span class="badge">生成 rhb 命令并执行</span></div>
+    <div class="card-b">
+      <div class="field">
+        <label>目标 URL <span class="req">*</span></label>
+        <input type="text" id="url" placeholder="http://127.0.0.1:8080" value="http://127.0.0.1:8080">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>请求方法</label>
+          <select id="method">
+            <option>GET</option><option>POST</option><option>PUT</option>
+            <option>DELETE</option><option>PATCH</option><option>HEAD</option>
+            <option>OPTIONS</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>并发数 <span class="badge" style="background:var(--panel2);color:var(--muted);padding:1px 6px;border-radius:10px;font-weight:600;font-size:10px">-c 默认50</span></label>
+          <input type="number" id="concurrency" value="50" min="1">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>总请求数 <span class="badge" style="background:var(--panel2);color:var(--muted);padding:1px 6px;border-radius:10px;font-weight:600;font-size:10px">-n</span></label>
+          <input type="number" id="requests" value="1000" min="0">
+        </div>
+        <div class="field">
+          <label>压测时长(秒) <span class="badge" style="background:var(--panel2);color:var(--muted);padding:1px 6px;border-radius:10px;font-weight:600;font-size:10px">-t</span></label>
+          <input type="number" id="time" placeholder="可选，留空则按请求数" min="0">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>QPS 限流 <span class="badge" style="background:var(--panel2);color:var(--muted);padding:1px 6px;border-radius:10px;font-weight:600;font-size:10px">--rate</span></label>
+          <input type="number" id="rate" placeholder="0=不限流" min="0">
+        </div>
+        <div class="field">
+          <label>请求体 <span class="badge" style="background:var(--panel2);color:var(--muted);padding:1px 6px;border-radius:10px;font-weight:600;font-size:10px">-d</span></label>
+          <input type="text" id="body" placeholder='如 {"name":"test"}'>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>自定义请求头</label>
+        <div id="hdrList"></div>
+        <button class="add-btn" id="addHdr" type="button">+ 添加请求头</button>
+      </div>
+
+      <div class="field">
+        <label>协议选项</label>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="http2"> HTTP/2</label>
+          <label class="check"><input type="checkbox" id="no_tls"> 禁用 TLS 校验</label>
+          <label class="check"><input type="checkbox" id="no_redirect"> 禁止重定向</label>
+          <label class="check"><input type="checkbox" id="histogram"> 输出延迟柱状图</label>
+        </div>
+      </div>
+
+      <details class="adv">
+        <summary>高级选项（预热 / 超时 / 数据集 / 阈值）</summary>
+        <div style="margin-top:10px">
+          <div class="row2">
+            <div class="field"><label>预热请求数 --warmup</label>
+              <input type="number" id="warmup" value="0" min="0"></div>
+            <div class="field"><label>请求超时(秒) --timeout</label>
+              <input type="number" id="timeout" value="30" min="1"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>失败重试 --retries</label>
+              <input type="number" id="retries" value="0" min="0"></div>
+            <div class="field"><label>数据集文件 --dataset</label>
+              <input type="text" id="dataset" placeholder="dataset/dataset.example.json"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>数据集模式 --dataset-mode</label>
+              <select id="dataset_mode">
+                <option value="random">random</option>
+                <option value="sequential">sequential</option>
+              </select></div>
+            <div class="field"><label>p99 阈值(ms) --p99-threshold-ms</label>
+              <input type="number" id="p99_threshold_ms" placeholder="可选"></div>
+          </div>
+          <div class="field"><label>错误率阈值(%) --error-threshold-pct</label>
+            <input type="number" id="error_threshold_pct" placeholder="可选，如 1.0"></div>
+        </div>
+      </details>
+
+      <div class="actions">
+        <button class="btn btn-start" id="startBtn">开始压测</button>
+        <button class="btn btn-stop" id="stopBtn" disabled>停止</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 右侧：结果展示 -->
+  <section class="results">
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-h">运行状态</div>
+      <div class="card-b" id="runtimeBox">
+        <div class="empty-tip">配置左侧参数后点击「开始压测」。</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px; display:none" id="metricCard">
+      <div class="card-h">总体指标</div>
+      <div class="card-b">
+        <div class="metric-grid" id="metricGrid"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px; display:none" id="latCard">
+      <div class="card-h">延迟分布（毫秒）</div>
+      <div class="card-b">
+        <div class="lat-grid" id="latGrid"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px; display:none" id="chartCard">
+      <div class="card-h">可视化图表</div>
+      <div class="card-b">
+        <div class="charts">
+          <div class="chart-box">
+            <div class="cb-h">延迟百分位柱状图</div>
+            <div class="chart" id="latChart"></div>
+          </div>
+          <div class="chart-box">
+            <div class="cb-h">状态码分布</div>
+            <div class="chart" id="statusChart"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px; display:none" id="rawCard">
+      <div class="card-h">原始输出</div>
+      <div class="card-b">
+        <pre id="raw"></pre>
+        <div class="dl-row" id="dlRow">
+          <a class="dl-link" href="/download/result.json" target="_blank">下载 JSON 结果</a>
+          <a class="dl-link" href="/download/result.csv" target="_blank">下载 CSV 明细</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const dot = $('dot'), statusText = $('statusText');
+  let es = null, timer = null, startTs = 0;
+
+  /* ---------- 状态 ---------- */
+  function setStatus(state, msg) {
+    dot.className = 'dot' + (state ? ' ' + state : '');
+    statusText.textContent = msg || '待命';
+  }
+  function showToast(text) {
+    const t = $('toast');
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function fmt(n, d) {
+    if (n === null || n === undefined || isNaN(n)) return '--';
+    return Number(n).toLocaleString('zh-CN', { maximumFractionDigits: d == null ? 2 : d });
+  }
+
+  /* ---------- 请求头行 ---------- */
+  function addHdrRow(name, value) {
+    const wrap = $('hdrList');
+    const row = document.createElement('div');
+    row.className = 'hdr-row';
+    const n = document.createElement('input');
+    n.type = 'text'; n.className = 'hdr-name'; n.placeholder = '名称'; n.value = name || '';
+    const v = document.createElement('input');
+    v.type = 'text'; v.className = 'hdr-value'; v.placeholder = '值'; v.value = value || '';
+    const del = document.createElement('button');
+    del.className = 'del'; del.type = 'button'; del.textContent = '✕';
+    del.onclick = () => row.remove();
+    row.append(n, v, del);
+    wrap.appendChild(row);
+  }
+
+  /* ---------- 收集配置 ---------- */
+  function collect() {
+    const headers = [];
+    document.querySelectorAll('.hdr-row').forEach(r => {
+      headers.push({ name: r.querySelector('.hdr-name').value, value: r.querySelector('.hdr-value').value });
+    });
+    const num = id => { const v = $(id).value; return v.trim() === '' ? null : v; };
+    return {
+      url: $('url').value.trim(),
+      method: $('method').value,
+      concurrency: num('concurrency'),
+      requests: num('requests'),
+      time: num('time'),
+      rate: num('rate'),
+      body: $('body').value,
+      headers: headers,
+      http2: $('http2').checked,
+      no_tls: $('no_tls').checked,
+      no_redirect: $('no_redirect').checked,
+      histogram: $('histogram').checked,
+      warmup: num('warmup'),
+      timeout: num('timeout'),
+      retries: num('retries'),
+      dataset: $('dataset').value.trim(),
+      dataset_mode: $('dataset_mode').value,
+      p99_threshold_ms: num('p99_threshold_ms'),
+      error_threshold_pct: num('error_threshold_pct')
+    };
+  }
+
+  /* ---------- 计时器 ---------- */
+  function startTimer() {
+    startTs = Date.now();
+    timer = setInterval(() => {
+      const s = ((Date.now() - startTs) / 1000).toFixed(1);
+      $('runtimeBox').innerHTML = `<div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+        <div class="metric"><div class="k">状态</div><div class="v warn">压测进行中…</div></div>
+        <div class="metric"><div class="k">已耗时</div><div class="v">${s} s</div></div>
+      </div>`;
+    }, 200);
+  }
+  function stopTimer() { clearInterval(timer); }
+
+  /* ---------- 运行控制 ---------- */
+  async function startBench() {
+    const cfg = collect();
+    if (!cfg.url) { showToast('请填写目标 URL'); return; }
+    if (!cfg.requests && !cfg.time) { showToast('请填写总请求数或压测时长（至少一项）'); return; }
+    $('startBtn').disabled = true; $('stopBtn').disabled = false;
+    ['metricCard','latCard','chartCard','rawCard'].forEach(id => $(id).style.display = 'none');
+    $('raw').textContent = '';
+    $('runtimeBox').innerHTML = '<div class="empty-tip">正在启动压测…</div>';
+    setStatus('running', '压测中');
+    try {
+      const res = await fetch('/api/run', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg)
+      });
+      const data = await res.json();
+      if (!data.ok) { setStatus('error', '启动失败'); showToast(data.message || '启动失败'); enableButtons(); return; }
+      startTimer();
+      connectSSE();
+    } catch (e) {
+      setStatus('error', '连接失败'); showToast('无法连接后端服务：' + e.message); enableButtons();
+    }
+  }
+
+  function enableButtons() {
+    $('startBtn').disabled = false; $('stopBtn').disabled = true;
+  }
+
+  async function stopBench() {
+    try {
+      await fetch('/api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      showToast('已发送停止信号');
+    } catch (e) { showToast('停止失败：' + e.message); }
+  }
+
+  /* ---------- SSE ---------- */
+  function connectSSE() {
+    if (es) es.close();
+    es = new EventSource('/api/events');
+    es.addEventListener('line', e => {
+      const d = JSON.parse(e.data);
+      const pre = $('raw');
+      pre.textContent += d + '\n';
+      pre.scrollTop = pre.scrollHeight;
+    });
+    es.addEventListener('done', e => {
+      const d = JSON.parse(e.data);
+      stopTimer(); enableButtons(); setStatus(d.exit_code === 0 ? 'done' : (d.exit_code === 2 ? 'warn' : 'error'), '完成');
+      if (d.result) renderResult(d.result);
+      es.close(); es = null;
+    });
+    es.addEventListener('fatal', e => {
+      const d = JSON.parse(e.data);
+      stopTimer(); enableButtons(); setStatus('error', '错误');
+      $('runtimeBox').innerHTML = `<div class="empty-tip" style="color:var(--danger)">${d.message || '发生错误'}</div>`;
+      es.close(); es = null;
+    });
+    es.onerror = () => { /* 连接关闭/重连由后端事件处理 */ };
+  }
+
+  /* ---------- 结果渲染 ---------- */
+  function renderResult(s) {
+    $('rawCard').style.display = '';
+    $('metricCard').style.display = '';
+    $('latCard').style.display = '';
+    $('chartCard').style.display = '';
+
+    const elapsed = (s.elapsed_secs || 0).toFixed(2);
+    $('runtimeBox').innerHTML = `<div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+      <div class="metric"><div class="k">压测耗时</div><div class="v">${elapsed} s</div></div>
+      <div class="metric"><div class="k">退出码</div><div class="v ${s.threshold_failed ? 'bad' : 'good'}">${s.threshold_failed ? '2（未达标）' : '0（达标）'}</div></div>
+      <div class="metric"><div class="k">目标 URL</div><div class="v" style="font-size:12px;word-break:break-all">${s.url || '--'}</div></div>
+    </div>`;
+
+    const mg = $('metricGrid');
+    mg.innerHTML = '';
+    const errRate = (s.error_rate_pct || 0);
+    const metrics = [
+      { k: 'QPS', v: fmt(s.qps, 1), cls: 'good' },
+      { k: '总请求数', v: fmt(s.total, 0) },
+      { k: '成功', v: fmt(s.success, 0), cls: 'good' },
+      { k: '失败', v: fmt(s.failure, 0), cls: s.failure > 0 ? 'bad' : '' },
+      { k: '错误率', v: errRate.toFixed(2) + '%', cls: errRate > 0 ? 'bad' : 'good' },
+      { k: '传输字节', v: fmt(s.bytes, 0) },
+      { k: '并发数', v: fmt(s.concurrency, 0) }
+    ];
+    metrics.forEach(m => {
+      const d = document.createElement('div'); d.className = 'metric';
+      d.innerHTML = `<div class="k">${m.k}</div><div class="v ${m.cls || ''}">${m.v}</div>`;
+      mg.appendChild(d);
+    });
+
+    const lg = $('latGrid'); lg.innerHTML = '';
+    const l = s.latency_ms || {};
+    const lats = [
+      { k: 'p50', v: fmt(l.p50, 2) }, { k: 'p90', v: fmt(l.p90, 2) },
+      { k: 'p95', v: fmt(l.p95, 2) }, { k: 'p99', v: fmt(l.p99, 2) },
+      { k: 'p99.9', v: fmt(l.p99_9, 2) }, { k: '平均', v: fmt(l.mean, 2) },
+      { k: '最小', v: fmt(l.min, 2) }, { k: '最大', v: fmt(l.max, 2) }
+    ];
+    lats.forEach(x => {
+      const d = document.createElement('div'); d.className = 'lat';
+      d.innerHTML = `<div class="k">${x.k}</div><div class="v">${x.v}</div><div class="u">ms</div>`;
+      lg.appendChild(d);
+    });
+
+    renderCharts(s);
+    $('rawCard').style.display = 'none';
+  }
+
+  /* ---------- 图表 ---------- */
+  let latChart = null, statusChart = null;
+  function renderCharts(s) {
+    if (typeof echarts === 'undefined') { $('chartCard').style.display = 'none'; return; }
+    const l = s.latency_ms || {};
+    const labels = ['min', 'p50', 'p90', 'p95', 'p99', 'p99.9', 'max'];
+    const values = [l.min, l.p50, l.p90, l.p95, l.p99, l.p99_9, l.max].map(v => Number(v).toFixed(2));
+    if (!latChart) latChart = echarts.init($('latChart'));
+    latChart.setOption({
+      backgroundColor: 'transparent',
+      grid: { left: 45, right: 12, top: 18, bottom: 24 },
+      tooltip: { trigger: 'axis', valueFormatter: v => v + ' ms' },
+      xAxis: { type: 'category', data: labels, axisLabel: { color: '#94a3b8' }, axisLine: { lineStyle: { color: '#1e293b' } } },
+      yAxis: { type: 'value', name: 'ms', nameTextStyle: { color: '#94a3b8' }, axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#1e293b' } } },
+      series: [{
+        type: 'bar', data: values, barWidth: '55%',
+        itemStyle: { borderRadius: [5, 5, 0, 0], color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#60a5fa' }, { offset: 1, color: '#2563eb' }]) },
+        label: { show: true, position: 'top', color: '#e2e8f0', fontSize: 10 }
+      }]
+    });
+
+    const sc = s.status_codes || {};
+    const codes = Object.keys(sc).map(k => ({ name: k, value: sc[k] }));
+    if (!statusChart) statusChart = echarts.init($('statusChart'));
+    statusChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: { bottom: 0, textStyle: { color: '#94a3b8' } },
+      color: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f43f5e'],
+      series: [{
+        type: 'pie', radius: ['45%', '70%'], center: ['50%', '44%'],
+        itemStyle: { borderRadius: 6, borderColor: '#0f172a', borderWidth: 2 },
+        label: { color: '#e2e8f0' },
+        data: codes.length ? codes : [{ name: '无数据', value: 1 }]
+      }]
+    });
+  }
+
+  /* ---------- 初始化 ---------- */
+  window.addEventListener('resize', () => {
+    if (latChart) latChart.resize();
+    if (statusChart) statusChart.resize();
+  });
+  $('addHdr').onclick = () => addHdrRow();
+  addHdrRow();
+  $('startBtn').onclick = startBench;
+  $('stopBtn').onclick = stopBench;
+
+  fetch('/api/health').then(r => r.json()).then(h => {
+    if (h.ok) {
+      statusText.textContent = '后端已连接' + (h.running ? ' · 压测中' : '');
+      if (!h.rhb_exe) showToast('未找到 rhb.exe，请先 cargo build --release');
+    }
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>

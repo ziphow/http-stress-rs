@@ -11,7 +11,34 @@
 - **数据集随机化压测**：JSON 数据集驱动，支持 `{{random.*}}` 模板动态生成参数
 - **高精度统计**：基于 HdrHistogram 输出 p50/p90/p95/p99/p99.9 延迟分布、QPS、错误率
 - **多格式导出**：终端报告、JSON 结构化输出、CSV 请求明细
+- **Web 图形界面**：内置本地 Web UI，可视化配置参数、实时展示结果图表
 - **CI 友好**：可配置性能阈值（p99、错误率），不达标时退出码为 2
+
+## Web 图形界面
+
+`rhb` 附带一个本地 Web 图形界面（`webui/`），无需记忆命令行参数，可视化配置并一键压测。
+
+### 启动方式
+
+```bash
+# Windows：双击 webui/启动UI.bat（自动打开浏览器）
+# 或命令行启动：
+python webui/server.py
+
+# Linux / macOS：
+bash webui/start_ui.sh
+```
+
+服务默认运行在 `http://127.0.0.1:8000/`，启动后自动打开浏览器。
+
+> 前置要求：已通过 `cargo build --release` 生成 `target/release/rhb(.exe)`，且本机安装 Python 3.8+。
+
+### 界面功能
+
+- **参数配置**：目标 URL、请求方法、并发数、请求数/时长、QPS 限流、请求头、请求体、HTTP/2、TLS、预热、超时、数据集、性能阈值等
+- **一键压测**：点击「开始压测」后台驱动 `rhb` 执行，可随时「停止」
+- **结果展示**：QPS、请求量、错误率等指标卡片；p50/p90/p95/p99 延迟卡片；延迟柱状图与状态码分布图（ECharts）
+- **结果导出**：一键下载 JSON 汇总与 CSV 请求明细（`webui/results/`）
 
 ## 快速开始
 
@@ -192,6 +219,7 @@ cargo run --release -- http://127.0.0.1:8080 -n 1000 -c 20
 ```
 rhb/
 ├── Cargo.toml            # 依赖与构建配置
+├── LICENSE               # MIT 开源许可
 ├── src/
 │   ├── main.rs           # 程序入口与主流程编排
 │   ├── lib.rs            # 库入口与模块声明
@@ -203,6 +231,11 @@ rhb/
 │   ├── stats.rs          # HdrHistogram 统计与原子计数器
 │   ├── worker.rs         # Worker Pool 负载调度
 │   └── report.rs         # 报告生成与 JSON/CSV 导出
+├── webui/                # Web 图形界面
+│   ├── index.html        # 前端页面（参数配置 + 结果图表）
+│   ├── server.py         # 本地后端（驱动 rhb 执行 + SSE 推送）
+│   ├── 启动UI.bat        # Windows 一键启动
+│   └── start_ui.sh       # Linux / macOS 一键启动
 ├── examples/
 │   └── demo_server.rs    # 演示目标服务器
 ├── config/
@@ -215,7 +248,7 @@ rhb/
 
 ## 许可
 
-本项目基于 MIT 许可开源，详见《版权和许可文档》。
+本项目基于 MIT 许可开源，详见 [LICENSE](LICENSE) 与《版权和许可文档》。
 
 ## 免责声明
 

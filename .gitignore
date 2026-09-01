@@ -1,6 +1,13 @@
 # 构建产物
 /target
 
+# Web UI 运行产生的临时结果
+/webui/results/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
 # Rust 备份文件
 **/*.rs.bk
 
